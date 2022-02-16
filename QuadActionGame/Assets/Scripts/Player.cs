@@ -5,11 +5,17 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     public float speed;
+    //무기 관련
+    public GameObject[] weapons; //무기 종류
+    public bool[] hasWeapons; //갖고 있는지
+
     float hAxis;
     float vAxis;
     bool wDown;
     bool jDown;
 
+    //아이템 상호작용
+    bool iDown;
     //점프 중인지
     bool isJump = false;
     //회피 중인지
@@ -21,9 +27,11 @@ public class Player : MonoBehaviour
 
     //물리 효과를 위한 변수
     Rigidbody rigid;
-
     //애니메이션 관련
     Animator anim;
+
+    //아이템 감지
+    GameObject nearObject;
 
     // Start is called before the first frame update
     void Awake()
@@ -45,6 +53,8 @@ public class Player : MonoBehaviour
         Jump();
         //회피
         Dodge();
+        //상호작용
+        Interation();
     }
 
     void GetInput()
@@ -54,6 +64,7 @@ public class Player : MonoBehaviour
         vAxis = Input.GetAxisRaw("Vertical"); //앞뒤
         wDown = Input.GetButton("Walk"); //걷기
         jDown = Input.GetButtonDown("Jump"); //점프
+        iDown = Input.GetButtonDown("Interation"); //상호작용(아이템)
     }
 
     void Move()
@@ -116,6 +127,26 @@ public class Player : MonoBehaviour
         isDodge = false;
     }    
 
+    void Interation()
+    {
+        //상호작용
+        //상효작용 키 눌림, 근처에 오브젝트가 있음, 점프나 회피 중이 아니면 상호작용
+        if(iDown && nearObject != null && !isJump && !isDodge)
+        {
+            //무기일 경우
+            if(nearObject.tag == "Weapon")
+            {
+                //주변의 감지된 무기를 받아옴
+                Item item = nearObject.GetComponent<Item>();
+                int weaponIndex = item.value; //해당 무기 번호
+                hasWeapons[weaponIndex] = true;
+
+                //무기는 획득한 후 사라짐
+                Destroy(nearObject);
+            }
+        }
+    }
+
     private void OnCollisionEnter(Collision collision)
     {
         //케릭터가 바닥과 닿아있다면 '점프중'을 false로
@@ -125,5 +156,19 @@ public class Player : MonoBehaviour
             anim.SetBool("isJump", false);
             isJump = false;
         }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        //아이템 감지
+        if (other.tag == "Weapon") //무기
+            nearObject = other.gameObject;
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        //아이템 감지 종료
+        if (other.tag == "Weapon") //무기
+            nearObject = null;
     }
 }
