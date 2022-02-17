@@ -14,12 +14,18 @@ public class Player : MonoBehaviour
     bool wDown;
     bool jDown;
 
+    //무기 바꾸기
+    bool sDown1; //1번
+    bool sDown2; //2번
+    bool sDown3; //3번
     //아이템 상호작용
     bool iDown;
     //점프 중인지
     bool isJump = false;
     //회피 중인지
     bool isDodge = false;
+    //무기 변경 중인지
+    bool isSwap = false;
 
     //벡터
     Vector3 moveVec; //이동시 벡터
@@ -32,6 +38,9 @@ public class Player : MonoBehaviour
 
     //아이템 감지
     GameObject nearObject;
+    //장착중인 무기
+    GameObject equipWeapon;
+    int equipWeaponIndex = -1;
 
     // Start is called before the first frame update
     void Awake()
@@ -55,6 +64,8 @@ public class Player : MonoBehaviour
         Dodge();
         //상호작용
         Interation();
+        //무기 바꾸기
+        Swap();
     }
 
     void GetInput()
@@ -64,7 +75,13 @@ public class Player : MonoBehaviour
         vAxis = Input.GetAxisRaw("Vertical"); //앞뒤
         wDown = Input.GetButton("Walk"); //걷기
         jDown = Input.GetButtonDown("Jump"); //점프
+
         iDown = Input.GetButtonDown("Interation"); //상호작용(아이템)
+        
+        //무기 변경 관련 값 받아오기
+        sDown1 = Input.GetButtonDown("Swap1"); //무기 바꾸기:1번
+        sDown2 = Input.GetButtonDown("Swap2"); //무기 바꾸기:2번
+        sDown3 = Input.GetButtonDown("Swap3"); //무기 바꾸기:3번
     }
 
     void Move()
@@ -75,6 +92,10 @@ public class Player : MonoBehaviour
         //회피를 하고 있을 경우 회피 방향으로만 이동할 수 있도록
         if (isDodge)
             moveVec = dodgeVec;
+
+        //무기 변경 중이라면 이동하지 않음
+        if (isSwap)
+            moveVec = Vector3.zero;
 
         //이동관련 걷기 할때는 속도 늦추기(0.3배로)
         transform.position += moveVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
@@ -93,7 +114,7 @@ public class Player : MonoBehaviour
     void Jump()
     {
         //점프키가 눌리고 점프중/회피중이 아니고, 움직이지 않을 경우 점프
-        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge)
+        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge && isSwap)
         {
             //벡터의 위쪽 방향으로 15만큼의 힘을 순간적(Impulse)으로 줌
             rigid.AddForce(Vector3.up * 15, ForceMode.Impulse);
@@ -107,7 +128,7 @@ public class Player : MonoBehaviour
     void Dodge()
     {
         //점프키가 눌리고 점프중이 아니고, 움직이는 중일 때 회피
-        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge)
+        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && isSwap)
         {
             dodgeVec = moveVec;
             //회피중일 때만 이동속도 2배
@@ -125,7 +146,48 @@ public class Player : MonoBehaviour
         //회피 종료
         speed /= 2;
         isDodge = false;
-    }    
+    }   
+    
+    void Swap()
+    {
+        //무기 변경
+        //변경하려는 무기가 없거나 이미 장착 중일 경우 스왑하지 않음
+        if (sDown1 && (!hasWeapons[0] || equipWeaponIndex == 0))
+            return;
+        if (sDown2 && (!hasWeapons[1] || equipWeaponIndex == 1))
+            return;
+        if (sDown3 && (!hasWeapons[2] || equipWeaponIndex == 2))
+            return;
+
+        //변경한 무기 번호 받아오기
+        int weaponIndex = -1;
+        if (sDown1) weaponIndex = 0;
+        if (sDown2) weaponIndex = 1;
+        if (sDown3) weaponIndex = 2;
+
+        //무기가 눌리고 점프나 회피 중이 아닐 경우
+        if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isSwap)
+        {
+            //이미 장착중인 무기가 없으면 setActive 줄 사용하지 않음
+            if (equipWeapon != null)
+                equipWeapon.SetActive(false);
+            equipWeaponIndex = weaponIndex;//변경한 무기 인덱스 변경
+            equipWeapon = weapons[weaponIndex]; //변경한 무기 장착시키기
+            weapons[weaponIndex].SetActive(true); //변경한 무기 활성화
+
+            //바꾸기 애니메이션 불러오기
+            anim.SetTrigger("doSwap");
+
+            isSwap = true;
+
+            Invoke("SwapOut", 0.04f);
+        }
+    }
+
+    void SwapOut()
+    {
+        isSwap = false;
+    }
 
     void Interation()
     {
