@@ -8,6 +8,18 @@ public class Player : MonoBehaviour
     //무기 관련
     public GameObject[] weapons; //무기 종류
     public bool[] hasWeapons; //갖고 있는지
+    public GameObject[] grenades; //수류탄
+    public int hasGrendes; //수류탄 갯수
+
+    //아이템 관련
+    public int ammo; //총알
+    public int coin; //코인
+    public int health; //채력
+
+    public int maxAmmo; //최대 총알
+    public int maxCoin; //최대 코인
+    public int maxHealth; //최대 채력
+    public int maxHasGrendes; //최대 수류탄
 
     float hAxis;
     float vAxis;
@@ -232,5 +244,42 @@ public class Player : MonoBehaviour
         //아이템 감지 종료
         if (other.tag == "Weapon") //무기
             nearObject = null;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        //아이템 획득
+        if(other.tag == "Item")
+        {
+            Item item = other.GetComponent<Item>();
+            switch (item.type)
+            {
+                case Item.Type.Ammo://총알 획득
+                    ammo += item.value;
+                    if (ammo > maxAmmo) //최대 값을 넘지 못하도록
+                        ammo = maxAmmo;
+                    break;
+                case Item.Type.Coin://코인 획득
+                    coin += item.value;
+                    if (coin > maxCoin)
+                        coin = maxCoin;
+                    break;
+                case Item.Type.Heart://채력 획득
+                    health += item.value;
+                    if (health > maxHealth)
+                        health = maxHealth;
+                    break;
+                case Item.Type.Grenade://수류탄 획득
+                    //수류탄 활성화
+                    grenades[hasGrendes].SetActive(true);
+                    hasGrendes += item.value;
+                    if (hasGrendes > maxHasGrendes)
+                        hasGrendes = maxHasGrendes;
+                    break;
+            }
+
+            //획득한 아이템은 디스트로이
+            Destroy(other.gameObject);
+        }
     }
 }
