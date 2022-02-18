@@ -11,6 +11,9 @@ public class Player : MonoBehaviour
     public GameObject[] grenades; //수류탄
     public int hasGrendes; //수류탄 갯수
 
+    //카메라 변수
+    public Camera followCamera;
+
     //아이템 관련
     public int ammo; //총알
     public int coin; //코인
@@ -27,7 +30,9 @@ public class Player : MonoBehaviour
     bool jDown;
     
     //공격하기
-    bool fDwon; 
+    bool fDown;
+    //장전
+    bool rDown;
     //무기 바꾸기
     bool sDown1; //1번
     bool sDown2; //2번
@@ -42,6 +47,8 @@ public class Player : MonoBehaviour
     bool isSwap;
     //공격 가능한지
     bool isFireReady = true;
+    //재장전 중인지
+    bool isReload;
 
     //벡터
     Vector3 moveVec; //이동시 벡터
@@ -80,6 +87,8 @@ public class Player : MonoBehaviour
         Jump();
         //공격
         Attack();
+        //장전
+        Reload();
         //회피
         Dodge();
         //상호작용
@@ -104,7 +113,10 @@ public class Player : MonoBehaviour
         sDown3 = Input.GetButtonDown("Swap3"); //무기 바꾸기:3번
 
         //공격 버튼
-        fDwon = Input.GetButtonDown("Fire1");
+        fDown = Input.GetButtonDown("Fire1");
+        //재장전
+        rDown = Input.GetButtonDown("Reload");
+
     }
 
     void Move()
@@ -116,8 +128,9 @@ public class Player : MonoBehaviour
         if (isDodge)
             moveVec = dodgeVec;
 
+
         //무기 변경 중이라면, 공격중이 아니라면 이동하지 않음
-        if (isSwap || !isFireReady)
+        if (isSwap || !isFireReady || isReload)
             moveVec = Vector3.zero;
 
         //이동관련 걷기 할때는 속도 늦추기(0.3배로)
@@ -131,13 +144,32 @@ public class Player : MonoBehaviour
 
     void Turn()
     {
-        //회전하기: 바라보는 방향으로 몸 회전
+        //키보드에 의해 회전하기: 바라보는 방향으로 몸 회전
         transform.LookAt(transform.position + moveVec);
+
+        //마우스에 의해 회전
+        if (fDown)//마우스가 클릭되었을 때만 바라보게 함
+        {
+            //카메라에서 마우스가 눌린 방향으로 레이를 쏨
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit rayHit;
+            //out: 레이에서 맞은 대상이 있다면 rayHit로 전송
+            if(Physics.Raycast(ray, out rayHit, 100))
+            {
+                //마우스 클릭 상대 위치
+                Vector3 nextVec = rayHit.point - transform.position;
+                //높이는 무시하도록
+                nextVec.y = 0;
+                //해당 방향으로 돌림
+                transform.LookAt(transform.position + nextVec);
+            }
+        }
+        
     }
     void Jump()
     {
         //점프키가 눌리고 점프중/회피중이 아니고, 움직이지 않을 경우 점프
-        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge && isSwap)
+        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge && !isSwap)
         {
             //벡터의 위쪽 방향으로 15만큼의 힘을 순간적(Impulse)으로 줌
             rigid.AddForce(Vector3.up * 15, ForceMode.Impulse);
@@ -154,25 +186,60 @@ public class Player : MonoBehaviour
         //장착된 무기가 없을 경우
         if (equipWeapon == null)
             return;
-
+ 
         //공격 대기 시간추가
         fireDelay += Time.deltaTime;
         //공격 가능 여부: 공속기 대기 시간보다 클 경우
         isFireReady = equipWeapon.rate < fireDelay; 
-
+ 
         //공격키를 누르고, 공격 가능하고, 회피나 무기를 교체중이 아니라면 공격함
-        if(fDwon && isFireReady && !isDodge && !isSwap)
+        if(fDown && isFireReady && !isDodge && !isSwap)
         {
             equipWeapon.Use();
-            anim.SetTrigger("doSwing");//애니메이션 처리
+            anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");//애니메이션 처리
             fireDelay = 0;//공격 대기 시간 초기화
         }
+    }
+
+    void Reload()
+    {
+        //재장전
+        //무기가 없으면 나감
+        if (equipWeapon == null)
+            return;
+        //무기가 근거리 무기면 나감
+        if (equipWeapon.type == Weapon.Type.Melee)
+            return;
+        //남은 총알이 없으면 나감
+        if (ammo == 0)
+            return;
+
+        //Debug.Log(rDown + ": 재장전" + !isJump + ": 재장전" + !isDodge + ":회피중" + !isSwap + "무기 전환중"+ !isFireReady + "무기 전환중");
+        //재장전 키가 눌리고, 점프, 회피, 무기 변경 중이 아니고, 격발중이 아닐 경우
+        if (rDown && !isJump && !isDodge && !isSwap && isFireReady)
+        {
+            anim.SetTrigger("doReload"); //애니메이션 설정
+            isReload = true;//재장전 중 표시
+ 
+            //재장전 중 표시 해제(재장전 시간)
+            Invoke("ReloadOut", 3f);
+        }
+    }
+ 
+    void ReloadOut()
+    {
+        //남아있는 탄창 갯수가 max 보다 많으면 max개, 아니면 남은 탄창 수 만큼 넣어줌
+        int reAmmo = ammo < equipWeapon.maxAmmo ? ammo : equipWeapon.maxAmmo;
+        equipWeapon.curAmmo = reAmmo;
+        //플래이어의 탄창 수 감소
+        ammo -= reAmmo;
+        isReload = false;
     }
 
     void Dodge()
     {
         //점프키가 눌리고 점프중이 아니고, 움직이는 중일 때 회피
-        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && isSwap)
+        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && !isSwap)
         {
             dodgeVec = moveVec;
             //회피중일 때만 이동속도 2배
