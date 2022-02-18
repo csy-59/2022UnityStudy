@@ -54,6 +54,8 @@ public class Player : MonoBehaviour
     bool isReload;
     //벽인지
     bool isBorder;
+    //공격받는 중인지
+    bool isDamage;
 
     //벡터
     Vector3 moveVec; //이동시 벡터
@@ -63,6 +65,8 @@ public class Player : MonoBehaviour
     Rigidbody rigid;
     //애니메이션 관련
     Animator anim;
+    //플레이어의 Mesh를 받을 배열
+    MeshRenderer[] meshs;
 
     //아이템 감지
     GameObject nearObject;
@@ -77,6 +81,7 @@ public class Player : MonoBehaviour
     {
         rigid = GetComponent<Rigidbody>();
         anim = GetComponentInChildren<Animator>();
+        meshs = GetComponentsInChildren<MeshRenderer>();
     }
 
     // Update is called once per frame
@@ -447,6 +452,38 @@ public class Player : MonoBehaviour
 
             //획득한 아이템은 디스트로이
             Destroy(other.gameObject);
+        }
+        else if(other.tag == "EnemyBullet")
+        {
+            if (!isDamage) //데미지를 받고 있는 중이 아니라면 실행
+            {
+                //적에게 공격받을 경우
+                Bullet enemyBullet = other.GetComponent<Bullet>();
+                health -= enemyBullet.damage;
+
+                //피격시 코루틴 시작
+                StartCoroutine(onDamage());
+
+            }
+            
+        }
+    }
+
+    IEnumerator onDamage()
+    {
+        //피격시 1초동안 노란색으로 무적 상태
+        isDamage = true;
+        foreach(MeshRenderer mesh in meshs)
+        {
+            mesh.material.color = Color.yellow;
+        }
+        yield return new WaitForSeconds(1f);
+
+        //다시 원래대로 돌아옴
+        isDamage = false;
+        foreach (MeshRenderer mesh in meshs)
+        {
+            mesh.material.color = Color.white;
         }
     }
 }
