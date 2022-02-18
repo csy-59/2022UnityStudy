@@ -47,7 +47,7 @@ public class Weapon : MonoBehaviour
         trailEffect.enabled = true; //이펙트 실행
 
         //2구역 : 코드 실행
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSeconds(0.5f);
         meleeArea.enabled = false; //콜라이더 중지
 
 

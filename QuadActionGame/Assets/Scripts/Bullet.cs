@@ -20,4 +20,13 @@ public class Bullet : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        //총알이 벽에 박히면 바로 사라짐
+        if (other.gameObject.tag == "Wall")
+        {
+            Destroy(gameObject);
+        }
+    }
 }
