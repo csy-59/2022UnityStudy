@@ -10,6 +10,7 @@ public class Player : MonoBehaviour
     public bool[] hasWeapons; //갖고 있는지
     public GameObject[] grenades; //수류탄
     public int hasGrendes; //수류탄 갯수
+    public GameObject grenadeObject; //수류탄 프리펩
 
     //카메라 변수
     public Camera followCamera;
@@ -30,6 +31,8 @@ public class Player : MonoBehaviour
     bool jDown;
     //공격하기
     bool fDown;
+    //수류탄 던지기
+    bool gDown;
     //장전
     bool rDown;
     //무기 바꾸기
@@ -87,6 +90,8 @@ public class Player : MonoBehaviour
         Turn();
         //점프
         Jump();
+        //수류탄
+        Grenade();
         //공격
         Attack();
         //장전
@@ -116,6 +121,8 @@ public class Player : MonoBehaviour
 
         //공격 버튼
         fDown = Input.GetButtonDown("Fire1");
+        //수류탄 버튼
+        gDown = Input.GetButtonDown("Fire2");
         //재장전
         rDown = Input.GetButtonDown("Reload");
 
@@ -206,6 +213,40 @@ public class Player : MonoBehaviour
             equipWeapon.Use();
             anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");//애니메이션 처리
             fireDelay = 0;//공격 대기 시간 초기화
+        }
+    }
+
+    void Grenade()
+    {
+        //수류탄이 없다면 반환
+        if (hasGrendes == 0)
+            return;
+
+        //수류탄 버튼이 눌리고 재장전과 무기변경 중이 아니라면
+        if(gDown && !isReload && !isSwap)
+        {
+            //마우스가 클릭한 곳에 수류탄 던지기
+            Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
+            RaycastHit rayHit;
+            //out: 레이에서 맞은 대상이 있다면 rayHit로 전송
+            if (Physics.Raycast(ray, out rayHit, 100))
+            {
+                //마우스 클릭 상대 위치
+                Vector3 nextVec = rayHit.point - transform.position;
+                //약간 높이가 있게 던짐
+                nextVec.y = 15;
+
+                //프리펩된 수류탄 생성
+                GameObject instantGrenade = Instantiate(grenadeObject, transform.position, transform.rotation);
+                //수류탄 던지기
+                Rigidbody rigidGrenade = instantGrenade.GetComponent<Rigidbody>();
+                rigidGrenade.AddForce(nextVec, ForceMode.Impulse);
+                //수류탄에 회전 주기
+                rigidGrenade.AddTorque(Vector3.back * 10, ForceMode.Impulse);
+
+                hasGrendes--;
+                grenades[hasGrendes].SetActive(false);
+            }
         }
     }
 

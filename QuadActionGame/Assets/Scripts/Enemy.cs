@@ -23,6 +23,16 @@ public class Enemy : MonoBehaviour
         mat = GetComponent<MeshRenderer>().material;
     }
 
+    public void HitByGrenade(Vector3 explosionPos)
+    {
+        //수류탄 피격처리
+        curHealth -= 100;
+        //피격 받은 상대적 방향 구하기
+        Vector3 reactVec = transform.position - explosionPos;
+        //구한 방향을 기반으로 
+        StartCoroutine(OnDamage(reactVec, true));
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if(other.tag == "Melee")
@@ -33,7 +43,7 @@ public class Enemy : MonoBehaviour
             //넉백에 관한 방향(공격 받은 방향)
             Vector3 reactVec = transform.position - other.transform.position;
             //피격 코루틴 시작
-            StartCoroutine(OnDamage(reactVec));
+            StartCoroutine(OnDamage(reactVec, false));
         }
         else if(other.tag == "Bullet")
         {
@@ -45,11 +55,11 @@ public class Enemy : MonoBehaviour
             //총알은 삭제해서 통과하지 못하도록
             Destroy(other.gameObject);
             //피격 코루틴 시작
-            StartCoroutine(OnDamage(reactVec));
+            StartCoroutine(OnDamage(reactVec, false));
         }
     }
 
-    IEnumerator OnDamage(Vector3 reactVec)
+    IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
         //피격시 빨강색으로
         mat.color = Color.red;
@@ -66,11 +76,27 @@ public class Enemy : MonoBehaviour
             //죽으면 더이상 피격 받지 않도록
             gameObject.layer = 12;
 
-            //방향 통일
-            reactVec = reactVec.normalized;
-            reactVec += Vector3.up; //위로도 넉백 주기
-            //넉백 주기
-            rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+
+            if (isGrenade)
+            {
+                //방향 통일
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up * 3; //위로도 넉백 주기
+
+                //수류탄으로 죽으면 더 회전하는 이펙트를 주기 위해 freeze 수정
+                rigid.freezeRotation = false;
+                //넉백 주기
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+                rigid.AddTorque(reactVec * 15, ForceMode.Impulse);
+            } else
+            {
+                //방향 통일
+                reactVec = reactVec.normalized;
+                reactVec += Vector3.up; //위로도 넉백 주기
+                //넉백 주기
+                rigid.AddForce(reactVec * 5, ForceMode.Impulse);
+            }
+            
 
             Destroy(gameObject, 4);
         }
