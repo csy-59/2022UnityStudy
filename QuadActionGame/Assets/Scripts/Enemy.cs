@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
@@ -8,11 +9,24 @@ public class Enemy : MonoBehaviour
     public int maxHealth;
     public int curHealth;
 
+    //쫓고 있는지
+    public bool isChase;
+
+    //목표(캐릭터)
+    public Transform target;
+
     //물리 관련
     Rigidbody rigid;
     BoxCollider boxCollider;
     //피격 효과
     Material mat;
+
+    //유니티에서 제공하는 AI
+    NavMeshAgent nav;
+    //NavMesh: NavMeshAgent가 경로를 그리기 위한 바탕
+    //NavMesh는 유니티의 Window > AI > Navigation에서 bake 탭에서 bake를 눌러야한다.
+    //애니메이션
+    Animator anim;
 
     private void Awake()
     {
@@ -20,7 +34,30 @@ public class Enemy : MonoBehaviour
         rigid = GetComponent<Rigidbody>();
         boxCollider = GetComponent<BoxCollider>();
         //material은 MeshRenderer에서만 가져올 수 있음
-        mat = GetComponent<MeshRenderer>().material;
+        mat = GetComponentInChildren<MeshRenderer>().material;
+        nav = GetComponent<NavMeshAgent>();
+        anim = GetComponentInChildren<Animator>();
+
+        //생성되고 2초 뒤에 쫓아가기 시작
+        Invoke("ChaseStart", 2);
+    }
+
+    void ChaseStart()
+    {
+        //쫓아가기 시작
+        isChase = true;
+        //애니메이션 설정
+        anim.SetBool("isWalk", true);
+    }
+
+    private void Update()
+    {
+        if (isChase) //쫓아가는 중에만
+        {
+            //목표를 따라가도록 설정
+            nav.SetDestination(target.position);
+        }
+        
     }
 
     public void HitByGrenade(Vector3 explosionPos)
@@ -75,6 +112,12 @@ public class Enemy : MonoBehaviour
             mat.color = Color.gray;
             //죽으면 더이상 피격 받지 않도록
             gameObject.layer = 12;
+            //쫓기 금지
+            isChase = false;
+            //넉백 효과를 유지하기 위하여 NavAgent 비활성화
+            nav.enabled = false;
+            //애니메이션 효과
+            anim.SetTrigger("doDie");
 
 
             if (isGrenade)
@@ -100,5 +143,22 @@ public class Enemy : MonoBehaviour
 
             Destroy(gameObject, 4);
         }
+    }
+
+    void FreezeVelocity()
+    {
+        //캐릭터가 다른 rigidBody와 충돌했을 때 일어나는 회전력과 반동 0으로 초기화
+        if (isChase)
+        {
+            rigid.velocity = Vector3.zero;
+            rigid.angularVelocity = Vector3.zero;
+        }
+        
+    }
+
+    private void FixedUpdate()
+    {
+        //FixedUpdate: 프레임 단위의 일정간격으로 호출되는 함수
+        FreezeVelocity();
     }
 }
