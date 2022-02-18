@@ -28,7 +28,6 @@ public class Player : MonoBehaviour
     float vAxis;
     bool wDown;
     bool jDown;
-    
     //공격하기
     bool fDown;
     //장전
@@ -39,6 +38,7 @@ public class Player : MonoBehaviour
     bool sDown3; //3번
     //아이템 상호작용
     bool iDown;
+
     //점프 중인지
     bool isJump;
     //회피 중인지
@@ -49,6 +49,8 @@ public class Player : MonoBehaviour
     bool isFireReady = true;
     //재장전 중인지
     bool isReload;
+    //벽인지
+    bool isBorder;
 
     //벡터
     Vector3 moveVec; //이동시 벡터
@@ -133,8 +135,14 @@ public class Player : MonoBehaviour
         if (isSwap || !isFireReady || isReload)
             moveVec = Vector3.zero;
 
-        //이동관련 걷기 할때는 속도 늦추기(0.3배로)
-        transform.position += moveVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
+        //경계에 있을 경우 이동하지 않음
+        if (!isBorder)
+        {
+            //이동관련 걷기 할때는 속도 늦추기(0.3배로)
+            transform.position += moveVec * speed * (wDown ? 0.3f : 1f) * Time.deltaTime;
+        }
+
+
 
 
         //애니메이션 관련
@@ -225,7 +233,6 @@ public class Player : MonoBehaviour
             Invoke("ReloadOut", 3f);
         }
     }
- 
     void ReloadOut()
     {
         //남아있는 탄창 갯수가 max 보다 많으면 max개, 아니면 남은 탄창 수 만큼 넣어줌
@@ -251,7 +258,6 @@ public class Player : MonoBehaviour
             Invoke("DodgeOut", 0.6f);
         }
     }
-
     void DodgeOut()
     {
         //회피 종료
@@ -294,7 +300,6 @@ public class Player : MonoBehaviour
             Invoke("SwapOut", 0.04f);
         }
     }
-
     void SwapOut()
     {
         isSwap = false;
@@ -318,6 +323,28 @@ public class Player : MonoBehaviour
                 Destroy(nearObject);
             }
         }
+    }
+
+    void FreezeRotation()
+    {
+        //캐릭터가 다른 rigidBody와 충돌했을 때 일어나는 회전력 0으로 초기화
+        rigid.angularVelocity = Vector3.zero;
+    }
+
+    void StopToWall()
+    {
+        //벽에서 더이상 이동하지 않기 위해 만든 레이
+        //레이의 시작점, 레이의 방향과 길이, 색
+        Debug.DrawRay(transform.position, transform.forward * 5, Color.green);
+        //레이어마스크가 Wall인 물체와 레이가 닿으면 isBorder은 true
+        isBorder = Physics.Raycast(transform.position, transform.forward, 5, LayerMask.GetMask("Wall"));
+    }
+
+    private void FixedUpdate()
+    {
+        //FixedUpdate: 프레임 단위의 일정간격으로 호출되는 함수
+        FreezeRotation();
+        StopToWall();
     }
 
     private void OnCollisionEnter(Collision collision)
