@@ -461,6 +461,12 @@ public class Player : MonoBehaviour
                 Bullet enemyBullet = other.GetComponent<Bullet>();
                 health -= enemyBullet.damage;
 
+                //rigidBody가 있으면 해당 bullet 삭제
+                if(other.GetComponent<Rigidbody>() != null)
+                {
+                    Destroy(other.gameObject);
+                }
+
                 //피격시 코루틴 시작
                 StartCoroutine(onDamage());
 

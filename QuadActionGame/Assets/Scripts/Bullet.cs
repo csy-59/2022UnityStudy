@@ -6,6 +6,8 @@ public class Bullet : MonoBehaviour
 {
     //총알의 데미지
     public int damage;
+    //근접 공격인지
+    public bool isMelee;
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -23,8 +25,8 @@ public class Bullet : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        //총알이 벽에 박히면 바로 사라짐
-        if (other.gameObject.tag == "Wall")
+        //총알이 벽에 박히면 바로 사라짐(근접 공격이 아니면)
+        if (!isMelee && other.gameObject.tag == "Wall")
         {
             Destroy(gameObject);
         }

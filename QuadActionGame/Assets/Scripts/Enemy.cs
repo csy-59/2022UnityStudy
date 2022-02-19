@@ -5,6 +5,10 @@ using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
+    //몬스터 타입
+    public enum Type { A, B, C };
+    public Type enemyType;
+
     //채력
     public int maxHealth;
     public int curHealth;
@@ -14,6 +18,13 @@ public class Enemy : MonoBehaviour
 
     //목표(캐릭터)
     public Transform target;
+
+    //공격 범위 변수화
+    public BoxCollider meleeArea;
+    //원거리 몬스터(C타입) 미사일을 담을 오브젝트
+    public GameObject bullet;
+    //공격 중인지
+    public bool isAttack;
 
     //물리 관련
     Rigidbody rigid;
@@ -52,12 +63,13 @@ public class Enemy : MonoBehaviour
 
     private void Update()
     {
-        if (isChase) //쫓아가는 중에만
+        if (nav.enabled) //nav이 활성화 되어 있을 때만(목표를 찾을 수 있을 때만) 움직임
         {
             //목표를 따라가도록 설정
             nav.SetDestination(target.position);
+            //쫓아가지 않을 때 멈춤
+            nav.isStopped = !isChase;
         }
-        
     }
 
     public void HitByGrenade(Vector3 explosionPos)
@@ -156,8 +168,107 @@ public class Enemy : MonoBehaviour
         
     }
 
+    void Targeting()
+    {
+        //타겟팅 : lay 사용, 범위로 감지해야하기 때문에 SphereCastAll 사용
+        float targetRadius = 0f;//lay 반지름
+        float targetRange = 0f; //lay 범위
+
+        //몬스터 타입 별로 타겟팅 lay 범위 지정해주기
+        switch (enemyType)
+        {
+            case Type.A:
+                targetRadius = 1.5f;
+                targetRange = 3f;
+                break;
+
+            case Type.B:
+                targetRadius = 1f;
+                targetRange = 12f;
+                break;
+
+            case Type.C:
+                //정확성을 위하여 반지름 작게
+                targetRadius = 0.5f;
+                targetRange = 25f;
+                break;
+        }
+
+        //SphereCastAll(<lay 기준>, <lay 반지름>, <lay 방향>, <lay 범위>, <lay 감지 대상>)
+        RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, 
+            targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+
+        //ray가 플레이어를 감지하고 이미 공격중이 아니라면
+        if (rayHits.Length > 0 && !isAttack)
+        {
+            //공격!
+            StartCoroutine(Attack());
+        }
+    }
+
+    IEnumerator Attack()
+    {
+        //공격 시작!
+        isChase = false;//추격 종료
+        isAttack = true;//공격 시작
+        anim.SetBool("isAttack", true);//애니메이션 설정
+
+        //몬스터 유형별로
+        switch (enemyType)
+        {
+            case Type.A:
+                //애니메이션에서의 딜레이를 생각하여 후에 공격 활성화
+                yield return new WaitForSeconds(0.2f);
+                meleeArea.enabled = true;//공격 범위 활성화(player에서 이와 부딪치면 반응함)
+
+                //공격후 공격 범위 비활성화
+                yield return new WaitForSeconds(1f);
+                meleeArea.enabled = false;
+
+                //공격 후 잠시 쉼
+                yield return new WaitForSeconds(1f);
+                break;
+
+            case Type.B:
+                //돌격 설정
+                yield return new WaitForSeconds(0.1f);
+                rigid.AddForce(transform.forward * 20, ForceMode.Impulse);
+                meleeArea.enabled = true;
+
+                //돌격해서 멈춤
+                yield return new WaitForSeconds(0.5f);
+                rigid.velocity = Vector3.zero; //속도 멈추기
+                meleeArea.enabled = false;
+
+                //공격 후 잠시 쉼
+                yield return new WaitForSeconds(2f);
+                break;
+
+            case Type.C:
+                //원거리 공격
+                yield return new WaitForSeconds(0.5f);
+                //공격을 위한 미사일 객체 생성
+                GameObject instantBullet = Instantiate(bullet, transform.position, transform.rotation);
+                //미사일의 rigidbody를 가져와서 공격
+                Rigidbody rigidBullet = instantBullet.GetComponent<Rigidbody>();
+                rigidBullet.velocity = transform.forward * 20;
+
+                //공격 후 잠시 쉼
+                yield return new WaitForSeconds(2f);
+                break;
+        }
+
+        //공격 후 처리
+        isChase = true;//추격 시작
+        isAttack = false;//공격 종료
+        anim.SetBool("isAttack", false);//애니메이션 설정
+    }
+
     private void FixedUpdate()
     {
+        //타겟이 공격 범위 내에 들어오면 타겟팅을 함
+        Targeting();
+
         //FixedUpdate: 프레임 단위의 일정간격으로 호출되는 함수
         FreezeVelocity();
     }
