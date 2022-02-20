@@ -6,7 +6,7 @@ using UnityEngine.AI;
 public class Enemy : MonoBehaviour
 {
     //몬스터 타입
-    public enum Type { A, B, C };
+    public enum Type { A, B, C, D };
     public Type enemyType;
 
     //채력
@@ -15,6 +15,8 @@ public class Enemy : MonoBehaviour
 
     //쫓고 있는지
     public bool isChase;
+    //죽었는지
+    public bool isDead;
 
     //목표(캐릭터)
     public Transform target;
@@ -27,17 +29,17 @@ public class Enemy : MonoBehaviour
     public bool isAttack;
 
     //물리 관련
-    Rigidbody rigid;
-    BoxCollider boxCollider;
+    public Rigidbody rigid;
+    public BoxCollider boxCollider;
     //피격 효과
-    Material mat;
+    public MeshRenderer[] meshs;
 
     //유니티에서 제공하는 AI
-    NavMeshAgent nav;
+    public NavMeshAgent nav;
     //NavMesh: NavMeshAgent가 경로를 그리기 위한 바탕
     //NavMesh는 유니티의 Window > AI > Navigation에서 bake 탭에서 bake를 눌러야한다.
     //애니메이션
-    Animator anim;
+    public Animator anim;
 
     private void Awake()
     {
@@ -45,12 +47,16 @@ public class Enemy : MonoBehaviour
         rigid = GetComponent<Rigidbody>();
         boxCollider = GetComponent<BoxCollider>();
         //material은 MeshRenderer에서만 가져올 수 있음
-        mat = GetComponentInChildren<MeshRenderer>().material;
+        meshs = GetComponentsInChildren<MeshRenderer>();
         nav = GetComponent<NavMeshAgent>();
         anim = GetComponentInChildren<Animator>();
 
-        //생성되고 2초 뒤에 쫓아가기 시작
-        Invoke("ChaseStart", 2);
+        //보스 일 경우 쫓아가지 않음
+        if(enemyType != Type.D)
+        {
+            //생성되고 2초 뒤에 쫓아가기 시작
+            Invoke("ChaseStart", 2);
+        }
     }
 
     void ChaseStart()
@@ -63,7 +69,7 @@ public class Enemy : MonoBehaviour
 
     private void Update()
     {
-        if (nav.enabled) //nav이 활성화 되어 있을 때만(목표를 찾을 수 있을 때만) 움직임
+        if (nav.enabled && enemyType != Type.D) //nav이 활성화 되어 있을 때만(목표를 찾을 수 있을 때만) 움직임
         {
             //목표를 따라가도록 설정
             nav.SetDestination(target.position);
@@ -110,18 +116,23 @@ public class Enemy : MonoBehaviour
 
     IEnumerator OnDamage(Vector3 reactVec, bool isGrenade)
     {
-        //피격시 빨강색으로
-        mat.color = Color.red;
+        foreach(MeshRenderer mesh in meshs)
+            //피격시 빨강색으로
+            mesh.material.color = Color.red;
+
         yield return new WaitForSeconds(0.1f);
 
         if(curHealth > 0)
         {
             //아직 죽지 않았다면 다시 원래 색으로
-            mat.color = Color.white;
+            foreach (MeshRenderer mesh in meshs)
+                mesh.material.color = Color.white;
         } else
         {
+            isDead = true;
             //죽으면 회색으로
-            mat.color = Color.gray;
+            foreach (MeshRenderer mesh in meshs)
+                mesh.material.color = Color.gray;
             //죽으면 더이상 피격 받지 않도록
             gameObject.layer = 12;
             //쫓기 금지
@@ -151,9 +162,10 @@ public class Enemy : MonoBehaviour
                 //넉백 주기
                 rigid.AddForce(reactVec * 5, ForceMode.Impulse);
             }
-            
 
-            Destroy(gameObject, 4);
+            //보스가 아닐 경우에만 사용
+            if (enemyType != Type.D)
+                Destroy(gameObject, 4);
         }
     }
 
@@ -170,39 +182,44 @@ public class Enemy : MonoBehaviour
 
     void Targeting()
     {
-        //타겟팅 : lay 사용, 범위로 감지해야하기 때문에 SphereCastAll 사용
-        float targetRadius = 0f;//lay 반지름
-        float targetRange = 0f; //lay 범위
-
-        //몬스터 타입 별로 타겟팅 lay 범위 지정해주기
-        switch (enemyType)
+        //보스가 아닐 경우, 살아있는 경우에만 추격함
+        if (enemyType != Type.D && !isDead)
         {
-            case Type.A:
-                targetRadius = 1.5f;
-                targetRange = 3f;
-                break;
+            //타겟팅 : lay 사용, 범위로 감지해야하기 때문에 SphereCastAll 사용
+            float targetRadius = 0f;//lay 반지름
+            float targetRange = 0f; //lay 범위
 
-            case Type.B:
-                targetRadius = 1f;
-                targetRange = 12f;
-                break;
+            //몬스터 타입 별로 타겟팅 lay 범위 지정해주기
+            switch (enemyType)
+            {
+                case Type.A:
+                    targetRadius = 1.5f;
+                    targetRange = 3f;
+                    break;
 
-            case Type.C:
-                //정확성을 위하여 반지름 작게
-                targetRadius = 0.5f;
-                targetRange = 25f;
-                break;
-        }
+                case Type.B:
+                    targetRadius = 1f;
+                    targetRange = 12f;
+                    break;
 
-        //SphereCastAll(<lay 기준>, <lay 반지름>, <lay 방향>, <lay 범위>, <lay 감지 대상>)
-        RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, 
-            targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+                case Type.C:
+                    //정확성을 위하여 반지름 작게
+                    targetRadius = 0.5f;
+                    targetRange = 25f;
+                    break;
+            }
 
-        //ray가 플레이어를 감지하고 이미 공격중이 아니라면
-        if (rayHits.Length > 0 && !isAttack)
-        {
-            //공격!
-            StartCoroutine(Attack());
+            //SphereCastAll(<lay 기준>, <lay 반지름>, <lay 방향>, <lay 범위>, <lay 감지 대상>)
+            RaycastHit[] rayHits = Physics.SphereCastAll(transform.position, 
+                targetRadius, transform.forward, targetRange, LayerMask.GetMask("Player"));
+
+            //ray가 플레이어를 감지하고 이미 공격중이 아니라면
+            if (rayHits.Length > 0 && !isAttack)
+            {
+                //공격!
+                StartCoroutine(Attack());
+            }
+
         }
     }
 

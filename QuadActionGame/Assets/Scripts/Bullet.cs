@@ -8,11 +8,13 @@ public class Bullet : MonoBehaviour
     public int damage;
     //근접 공격인지
     public bool isMelee;
+    //돌인지
+    public bool isRock;
 
     private void OnCollisionEnter(Collision collision)
     {
-        //탄피가 땅에 떨어지면 3초뒤 사라짐
-        if(collision.gameObject.tag == "Floor")
+        //탄피가 땅에 떨어지면 3초뒤 사라짐(돌이 아닐 경우)
+        if(!isRock && collision.gameObject.tag == "Floor")
         {
             Destroy(gameObject, 3);
         }

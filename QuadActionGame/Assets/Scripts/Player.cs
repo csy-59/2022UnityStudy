@@ -461,27 +461,38 @@ public class Player : MonoBehaviour
                 Bullet enemyBullet = other.GetComponent<Bullet>();
                 health -= enemyBullet.damage;
 
-                //rigidBody가 있으면 해당 bullet 삭제
-                if(other.GetComponent<Rigidbody>() != null)
-                {
-                    Destroy(other.gameObject);
-                }
+                //맞은 대상이 보스라면
+                bool isBossAtk = other.name == "Boss Melee Area";
 
                 //피격시 코루틴 시작
-                StartCoroutine(onDamage());
+                StartCoroutine(onDamage(isBossAtk));
 
             }
-            
+
+            //데미지를 받고 있는 중이는 아니는 그냥 맞으면 없애기
+            //rigidBody가 있으면 해당 bullet 삭제
+            if (other.GetComponent<Rigidbody>() != null)
+            {
+                Destroy(other.gameObject);
+            }
+
         }
     }
 
-    IEnumerator onDamage()
+    IEnumerator onDamage(bool isBossAtk)
     {
         //피격시 1초동안 노란색으로 무적 상태
         isDamage = true;
         foreach(MeshRenderer mesh in meshs)
         {
             mesh.material.color = Color.yellow;
+        }
+
+        //만약 보스의 공격이라면
+        if (isBossAtk)
+        {
+            //공격받고 뒤로 물러나기
+            rigid.AddForce(transform.forward * -25, ForceMode.Impulse);
         }
         yield return new WaitForSeconds(1f);
 
@@ -490,6 +501,12 @@ public class Player : MonoBehaviour
         foreach (MeshRenderer mesh in meshs)
         {
             mesh.material.color = Color.white;
+        }
+
+        //보스 공격시 주었던 힘 다시 초기화
+        if (isBossAtk)
+        {
+            rigid.velocity = Vector3.zero;
         }
     }
 }

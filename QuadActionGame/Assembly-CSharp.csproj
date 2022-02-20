@@ -56,16 +56,19 @@
     <Analyzer Include="C:\Program Files (x86)\Microsoft Visual Studio Tools for Unity\16.0\Analyzers\Microsoft.Unity.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Misslle.cs" />
     <Compile Include="Assets\Scripts\Player.cs" />
     <Compile Include="Assets\Scripts\Grenade.cs" />
     <Compile Include="Assets\Scripts\Weapon.cs" />
     <Compile Include="Assets\Scripts\Bullet.cs" />
+    <Compile Include="Assets\Scripts\BossMissile.cs" />
     <Compile Include="Assets\Scripts\Item.cs" />
     <Compile Include="Assets\QuarterView 3D Action BE5\ReadMe\Scripts\ReadmeBE5.cs" />
     <Compile Include="Assets\Scripts\Enemy.cs" />
     <Compile Include="Assets\Scripts\Orbit.cs" />
     <Compile Include="Assets\Scripts\Follow.cs" />
-    <Compile Include="Assets\Scripts\Misslle.cs" />
+    <Compile Include="Assets\Scripts\BossRock.cs" />
+    <Compile Include="Assets\Scripts\Boss.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
