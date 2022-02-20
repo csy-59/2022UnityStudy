@@ -56,6 +56,8 @@ public class Player : MonoBehaviour
     bool isBorder;
     //공격받는 중인지
     bool isDamage;
+    //쇼핑 중인지
+    bool isShop;
 
     //벡터
     Vector3 moveVec; //이동시 벡터
@@ -189,7 +191,7 @@ public class Player : MonoBehaviour
     void Jump()
     {
         //점프키가 눌리고 점프중/회피중이 아니고, 움직이지 않을 경우 점프
-        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge && !isSwap)
+        if (jDown && moveVec == Vector3.zero && !isJump && !isDodge && !isSwap && !isShop)
         {
             //벡터의 위쪽 방향으로 15만큼의 힘을 순간적(Impulse)으로 줌
             rigid.AddForce(Vector3.up * 15, ForceMode.Impulse);
@@ -213,7 +215,7 @@ public class Player : MonoBehaviour
         isFireReady = equipWeapon.rate < fireDelay; 
  
         //공격키를 누르고, 공격 가능하고, 회피나 무기를 교체중이 아니라면 공격함
-        if(fDown && isFireReady && !isDodge && !isSwap)
+        if(fDown && isFireReady && !isDodge && !isSwap && !isShop)
         {
             equipWeapon.Use();
             anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "doSwing" : "doShot");//애니메이션 처리
@@ -228,7 +230,7 @@ public class Player : MonoBehaviour
             return;
 
         //수류탄 버튼이 눌리고 재장전과 무기변경 중이 아니라면
-        if(gDown && !isReload && !isSwap)
+        if(gDown && !isReload && !isSwap && !isShop)
         {
             //마우스가 클릭한 곳에 수류탄 던지기
             Ray ray = followCamera.ScreenPointToRay(Input.mousePosition);
@@ -270,7 +272,7 @@ public class Player : MonoBehaviour
 
         //Debug.Log(rDown + ": 재장전" + !isJump + ": 재장전" + !isDodge + ":회피중" + !isSwap + "무기 전환중"+ !isFireReady + "무기 전환중");
         //재장전 키가 눌리고, 점프, 회피, 무기 변경 중이 아니고, 격발중이 아닐 경우
-        if (rDown && !isJump && !isDodge && !isSwap && isFireReady)
+        if (rDown && !isJump && !isDodge && !isSwap && isFireReady && !isShop)
         {
             anim.SetTrigger("doReload"); //애니메이션 설정
             isReload = true;//재장전 중 표시
@@ -292,7 +294,7 @@ public class Player : MonoBehaviour
     void Dodge()
     {
         //점프키가 눌리고 점프중이 아니고, 움직이는 중일 때 회피
-        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && !isSwap)
+        if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && !isSwap && !isShop)
         {
             dodgeVec = moveVec;
             //회피중일 때만 이동속도 2배
@@ -329,7 +331,7 @@ public class Player : MonoBehaviour
         if (sDown3) weaponIndex = 2;
 
         //무기가 눌리고 점프나 회피 중이 아닐 경우
-        if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isSwap)
+        if((sDown1 || sDown2 || sDown3) && !isJump && !isDodge && !isSwap && !isShop)
         {
             //이미 장착중인 무기가 없으면 setActive 줄 사용하지 않음
             if (equipWeapon != null)
@@ -355,7 +357,7 @@ public class Player : MonoBehaviour
     {
         //상호작용
         //상효작용 키 눌림, 근처에 오브젝트가 있음, 점프나 회피 중이 아니면 상호작용
-        if(iDown && nearObject != null && !isJump && !isDodge)
+        if(iDown && nearObject != null && !isJump && !isDodge && !isShop)
         {
             //무기일 경우
             if(nearObject.tag == "Weapon")
@@ -367,6 +369,15 @@ public class Player : MonoBehaviour
 
                 //무기는 획득한 후 사라짐
                 Destroy(nearObject);
+            }
+            //상점일 경우
+            else if(nearObject.tag == "Shop")
+            {
+                //상정 스크립트 가져오기
+                Shop shop = nearObject.GetComponent<Shop>();
+                //상점 입장 처리
+                isShop = true;
+                shop.Enter(this);
             }
         }
     }
@@ -407,8 +418,10 @@ public class Player : MonoBehaviour
     private void OnTriggerStay(Collider other)
     {
         //아이템 감지
-        if (other.tag == "Weapon") //무기
+        if (other.tag == "Weapon" || other.tag == "Shop")
+        {
             nearObject = other.gameObject;
+        }
     }
 
     private void OnTriggerExit(Collider other)
@@ -416,6 +429,20 @@ public class Player : MonoBehaviour
         //아이템 감지 종료
         if (other.tag == "Weapon") //무기
             nearObject = null;
+        //상점 감지 종료
+        else if(other.tag == "Shop")
+        {
+            //상점 스크립트 가져오기
+            Shop shop = nearObject.GetComponent<Shop>();
+            //나가기 처리
+            if(shop != null)
+            {
+                shop.Exit();
+            }
+            
+            isShop = false;
+            nearObject = null;
+        }
     }
 
     private void OnTriggerEnter(Collider other)
