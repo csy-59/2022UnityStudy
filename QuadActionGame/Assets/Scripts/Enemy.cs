@@ -13,6 +13,15 @@ public class Enemy : MonoBehaviour
     public int maxHealth;
     public int curHealth;
 
+    //점수
+    public int score;
+
+    //사망 처리를 위한 GameManager
+    public GameManager manager;
+
+    //보상 코인
+    public GameObject[] coins;
+
     //쫓고 있는지
     public bool isChase;
     //죽었는지
@@ -141,7 +150,29 @@ public class Enemy : MonoBehaviour
             nav.enabled = false;
             //애니메이션 효과
             anim.SetTrigger("doDie");
+            //플레이어에게 점수 주기
+            Player player = target.GetComponent<Player>();
+            player.score += score;
+            //코인 드랍
+            int ranCoin = Random.Range(0, 3);
+            Instantiate(coins[ranCoin], transform.position, Quaternion.identity);
 
+            //적 타입에 따라 사망처리(숫자 감소)
+            switch (enemyType)
+            {
+                case Type.A:
+                    manager.enemyCntA--;
+                    break;
+                case Type.B:
+                    manager.enemyCntB--;
+                    break;
+                case Type.C:
+                    manager.enemyCntC--;
+                    break;
+                case Type.D:
+                    manager.enemyCntD--;
+                    break;
+            }
 
             if (isGrenade)
             {
@@ -162,10 +193,7 @@ public class Enemy : MonoBehaviour
                 //넉백 주기
                 rigid.AddForce(reactVec * 5, ForceMode.Impulse);
             }
-
-            //보스가 아닐 경우에만 사용
-            if (enemyType != Type.D)
-                Destroy(gameObject, 4);
+           Destroy(gameObject, 4);
         }
     }
 
