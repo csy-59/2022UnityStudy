@@ -19,6 +19,7 @@ public class Player : MonoBehaviour
     public int ammo; //총알
     public int coin; //코인
     public int health; //채력
+    public int score; //점수
 
     public int maxAmmo; //최대 총알
     public int maxCoin; //최대 코인
@@ -73,7 +74,7 @@ public class Player : MonoBehaviour
     //아이템 감지
     GameObject nearObject;
     //장착중인 무기
-    Weapon equipWeapon;
+    public Weapon equipWeapon;
     int equipWeaponIndex = -1;
     //공격 딜레이
     float fireDelay; 
@@ -84,6 +85,10 @@ public class Player : MonoBehaviour
         rigid = GetComponent<Rigidbody>();
         anim = GetComponentInChildren<Animator>();
         meshs = GetComponentsInChildren<MeshRenderer>();
+
+        Debug.Log(PlayerPrefs.GetInt("MaxScore"));
+        //유니티에서 제공하는 간단한 저장 기능
+        //PlayerPrefs.SetInt("MaxScore", 112500);
     }
 
     // Update is called once per frame
